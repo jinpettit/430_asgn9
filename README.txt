@@ -12,7 +12,7 @@ sudo make install
 how I am testing ast.lua:
 
 ```
-~/FallQ2023/CSC430/Assignments/a9 ❯ lua -last // syntax: lua  -l(FILENAME)                                                                 ✘ INT 40s
+~/FallQ2023/CSC430/Assignments/a9 ❯ lua -last // syntax: lua  -l(FILENAME)                                                                 
 Lua 5.4.6  Copyright (C) 1994-2023 Lua.org, PUC-Rio
 > x = NumC(9)
 > x.n
