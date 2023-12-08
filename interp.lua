@@ -20,11 +20,9 @@ function interp(exp, envi)
             end
         elseif exp.type == "BlamC" then
             return CloV(exp.args, exp.body, envi)
-
-            
         elseif exp.type == "AppC" then
             local func = interp(exp.func, envi)
-            if func.type == "CloV" then
+            if func ~= nil and func.type == "CloV" then
                 if #func.args ~= #exp.args then
                     print("AppC: number of arguments does not match number of parameters")
                     return nil
@@ -35,7 +33,7 @@ function interp(exp, envi)
                 for i = 1, #exp.args do
                     append_envi[i] = Binding(func.args[i], interp(exp.args[i], envi))
                 end
-                
+
                 -- append extended envi to original envi
                 local new_envi = {}
                 for k, v in pairs(envi) do
@@ -45,20 +43,40 @@ function interp(exp, envi)
                     new_envi[k] = v
                 end
                 return interp(func.body, new_envi)
-                
-            elseif func.type == "PrimV" then
-                local args = {}
+            elseif func ~= nil and func.type == "PrimV" then
+                local args_val = {}
                 for i = 1, #exp.args do
-                    args[i] = interp(exp.args[i], envi)
+                    args_val[i] = interp(exp.args[i], envi)
                 end
-                return func.p(args)
+
+                if func.primop == "+" then
+                    return NumV(args_val[1].n + args_val[2].n)
+                elseif func.primop == "-" then
+                    return NumV(args_val[1].n - args_val[2].n)
+                elseif func.primop == "*" then
+                    return NumV(args_val[1].n * args_val[2].n)
+                elseif func.primop == "/" then
+                    return NumV(args_val[1].n / args_val[2].n)
+                elseif func.primop == "<=" then
+                    return BoolV(args_val[1].n <= args_val[2].n)
+                elseif func.primop == "equal?" then
+                    return BoolV(args_val[1].n == args_val[2].n)
+                elseif func.primop == "true" then
+                    return BoolV(true)
+                elseif func.primop == "false" then
+                    return BoolV(false)
+                else
+                    print("AppC: func is not a function")
+                    return nil
+                end
             else
-                print("AppC: func is not a function")
+                print("Invalid expression type")
                 return nil
             end
         else
             print("Invalid expression type")
             return nil
+
         end
     end
 end
@@ -97,5 +115,3 @@ local function serialize(v)
         return "#<primop>"
     end
 end
-
-
