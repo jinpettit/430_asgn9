@@ -20,6 +20,46 @@ function interp(exp, envi)
             end
         elseif exp.type == "BlamC" then
             return CloV(exp.args, exp.body, envi)
+
+            
+        elseif exp.type == "AppC" then
+            local func = interp(exp.func, envi)
+            if func.type == "CloV" then
+                if #func.args ~= #exp.args then
+                    print("AppC: number of arguments does not match number of parameters")
+                    return nil
+                end
+
+                -- extend envi
+                local append_envi = {}
+                for i = 1, #exp.args do
+                    append_envi[i] = Binding(func.args[i], interp(exp.args[i], envi))
+                end
+                
+                -- append extended envi to original envi
+                local new_envi = {}
+                for k, v in pairs(envi) do
+                    new_envi[k] = v
+                end
+                for k, v in pairs(append_envi) do
+                    new_envi[k] = v
+                end
+                return interp(func.body, new_envi)
+                
+            elseif func.type == "PrimV" then
+                local args = {}
+                for i = 1, #exp.args do
+                    args[i] = interp(exp.args[i], envi)
+                end
+                return func.p(args)
+            else
+                print("AppC: func is not a function")
+                return nil
+            end
+        else
+            print("Invalid expression type")
+            return nil
+        end
         end
     end
 end
