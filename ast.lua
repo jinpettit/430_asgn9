@@ -31,6 +31,10 @@ function IfC(statement, tru, fals)
     return { ["type"] = "IfC", ["statement"] = statement, ["tru"] = tru, ["fals"] = fals }
 end
 
+function BlamC(args, body)
+    return { type = "BlamC", args = args, body = body }
+end
+
 -- Binding
 function Binding(name, val)
     function Binding(name, val)
@@ -186,6 +190,23 @@ top_env = {
     Binding('false', BoolV(false))
 }
 
+-- serialize accepts any PAIG5 value and return a string
+function serialize(v)
+    if v.type == "NumV" then
+        return tostring(v.n)
+    elseif v.type == "BoolV" then
+        return v.b and "true" or "false"
+    elseif v.type == "StrV" then
+        return tostring(v.s)
+    elseif v.type == "CloV" then
+        return "#<procedure>"
+    elseif v.type == "PrimV" then
+        return "#<primop>"
+    else
+        error("serialize: unrecognized value type")
+    end
+end
+
 -- Returns true if input is an ExprC
 function isExprC(expr)
     if expr == nil then
@@ -220,12 +241,93 @@ local function helper(expr, accumulator)
         accumulator = accumulator .. "IfC(" .. helper(expr.statement) .. " " .. helper(expr.tru)
             .. " " .. helper(expr.fals) .. ")"
     end
+    if expr.type == "BlamC" then
+        accumulator = accumulator ..
+            "BlamC(" .. table.concat(expr.args, ", ") .. ")" .. " "
+    end
     return accumulator
 end
 
 -- Returns a string representation of an input expr.
 function exprToString(expr)
     return helper(expr, "")
+end
+
+-- checks if its a valid id
+function valid_id(s)
+    local invalid_ids = { 'as', 'with', 'blam', '?', 'else:' }
+
+    for i = 1, #invalid_ids do
+        if s == invalid_ids[i] then
+            return false
+        end
+    end
+
+    return true
+end
+
+-- removes duplicates from list
+function remove_duplicates(tbl)
+    local seen = {}
+    local result = {}
+
+    for i = 1, #tbl do
+        local value = tbl[i]
+        if not seen[value] then
+            table.insert(result, value)
+            seen[value] = true
+        end
+    end
+
+    return result
+end
+
+function printArray(arr)
+    io.write("{ ")
+    for i, v in ipairs(arr) do
+        io.write(v)
+        if i < #arr then
+            io.write(", ")
+        end
+    end
+    io.write(" }\n")
+end
+
+-- parse
+function parse(s)
+    if type(s) == "number" then
+        return { type = "NumC", n = s }
+    elseif type(s) == "string" then
+        if valid_id(s) then
+            return { type = "IdC", i = s }
+        else
+            return { type = "StrC", s = s }
+        end
+    elseif type(s) == "table" and #s > 0 then
+        if s[2] == "?" then
+            local statement = s[1]
+            local tru = s[3]
+            local fals = s[5]
+
+            return { type = "IfC", statement = parse(statement), tru = parse(tru), fals = parse(fals) }
+        elseif s[1] == "blam" then
+            local args = s[2]
+            local body = s[3]
+
+            local parsedBody = {}
+            for _, element in ipairs(body) do
+                table.insert(parsedBody, parse(element))
+                print(exprToString(parse(element)))
+            end
+
+
+            if #args == #remove_duplicates(args) then
+                return { type = "BlamC", args = args, body = parsedBody }
+            else
+                error("parse: Duplicates in args")
+            end
+        end
+    end
 end
 
 print(num_add({ NumV(2), NumV(1) }).n)
@@ -236,3 +338,11 @@ print(num_less_than_equal({ NumV(1), NumV(2) }).b)
 print(num_less_than_equal({ NumV(2), NumV(1) }).b)
 print(equal({ StrV("hi"), NumV(1) }).b)
 print(equal({ StrV("hi"), StrV("hi") }).b)
+print(serialize(StrV("hi")))
+print(serialize(NumV(3)))
+print(serialize(CloV(args, body, env)))
+print(serialize(CloV(args, body, env)))
+print(exprToString(parse(1)))
+print(exprToString(parse(1)))
+print(exprToString(parse({ 1, '?', 2, 'else:', 3 })))
+print(exprToString(parse({ "blam", { "x", "y" }, { "+", "x", "y" } })))
