@@ -35,6 +35,10 @@ function BlamC(args, body)
     return { type = "BlamC", args = args, body = body }
 end
 
+function AppC(func, args)
+    return { type = "AppC", func = func, args = args }
+end
+
 -- Binding
 function Binding(name, val)
     function Binding(name, val)

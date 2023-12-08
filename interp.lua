@@ -18,6 +18,8 @@ function interp(exp, envi)
                 print("If-statement does not result in boolean value")
                 return nil
             end
+        elseif exp.type == "BlamC" then
+            return CloV(exp.args, exp.body, envi)
         end
     end
 end
