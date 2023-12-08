@@ -39,20 +39,6 @@ function AppC(func, args)
     return { type = "AppC", func = func, args = args }
 end
 
--- Binding
-function Binding(name, val)
-    function Binding(name, val)
-        if type(name) ~= "string" then
-            error("Binding: Name must be a string")
-        end
-
-        if type(val) == "table" and type(val.type) ~= "string" then
-            error("Binding: Val must be a Value")
-        end
-
-        return { name = name, val = val }
-    end
-end
 
 -- Values
 Value = { NumV, BoolV, StrV, CloV, PrimV }
@@ -182,16 +168,39 @@ function equal(args)
     end
 end
 
+-- Binding
+function Binding(name, val)
+    if type(name) ~= "string" then
+        print(name)
+        print(type(name))
+        error("Binding: Name must be a string")
+    end
+
+    if type(val) == "table" and type(val.type) ~= "string" then
+        error("Binding: Val must be a Value")
+    end
+    top_env[name] = val
+    -- return { name = name, val = val }
+end
+
 -- top env
 top_env = {
-    Binding('+', PrimV(num_add)),
-    Binding('-', PrimV(num_sub)),
-    Binding('*', PrimV(num_mult)),
-    Binding('/', PrimV(num_div)),
-    Binding('<=', PrimV(num_less_than_equal)),
-    Binding('equal?', PrimV(equal)),
-    Binding('true', BoolV(true)),
-    Binding('false', BoolV(false))
+    ['+'] = PrimV(num_add),
+    ['-'] = PrimV(num_sub),
+    ['*'] = PrimV(num_mult),
+    ['/'] = PrimV(num_div),
+    ['<='] = PrimV(num_less_than_equal),
+    ['equal?'] = PrimV(equal),
+    ['true'] = BoolV(true),
+    ['false'] = BoolV(false)
+    -- Binding('+', PrimV(num_add)),
+    -- Binding('-', PrimV(num_sub)),
+    -- Binding('*', PrimV(num_mult)),
+    -- Binding('/', PrimV(num_div)),
+    -- Binding('<=', PrimV(num_less_than_equal)),
+    -- Binding('equal?', PrimV(equal)),
+    -- Binding('true', BoolV(true)),
+    -- Binding('false', BoolV(false))
 }
 
 -- serialize accepts any PAIG5 value and return a string
@@ -334,19 +343,156 @@ function parse(s)
     end
 end
 
--- print(num_add({ NumV(2), NumV(1) }).n)
--- print(num_sub({ NumV(2), NumV(1) }).n)
--- print(num_mult({ NumV(2), NumV(5) }).n)
--- print(num_div({ NumV(6), NumV(2) }).n)
--- print(num_less_than_equal({ NumV(1), NumV(2) }).b)
--- print(num_less_than_equal({ NumV(2), NumV(1) }).b)
--- print(equal({ StrV("hi"), NumV(1) }).b)
--- print(equal({ StrV("hi"), StrV("hi") }).b)
--- print(serialize(StrV("hi")))
--- print(serialize(NumV(3)))
--- print(serialize(CloV(args, body, env)))
--- print(serialize(CloV(args, body, env)))
--- print(exprToString(parse(1)))
--- print(exprToString(parse(1)))
--- print(exprToString(parse({ 1, '?', 2, 'else:', 3 })))
--- print(exprToString(parse({ "blam", { "x", "y" }, { "+", "x", "y" } })))
+
+-- Interps ExprCs --
+function interp(exp, envi)
+    if (isExprC(exp) == true) then
+        if exp.type == "NumC" then
+            return NumV(exp.n)
+        elseif exp.type == "IdC" then
+            return lookup(exp.i, envi)
+        elseif exp.type == "StrC" then
+            return StrV(exp.s)
+        elseif exp.type == "IfC" then
+            local temp = interp(exp.statement, envi)
+            if temp.type == "BoolV" then
+                if temp.b then
+                    return interp(exp.tru, envi)
+                end
+                return interp(exp.fals, envi)
+            else
+                print("If-statement does not result in boolean value")
+                return nil
+            end
+        elseif exp.type == "BlamC" then
+            return CloV(exp.args, exp.body, envi)
+        elseif exp.type == "AppC" then
+            local func = interp(exp.func, envi)
+            if func ~= nil and func.type == "CloV" then
+                if #func.args ~= #exp.args then
+                    print("AppC: number of arguments does not match number of parameters")
+                    return nil
+                end
+
+                -- extend envi
+                local append_envi = {}
+                for i = 1, #exp.args do
+                    -- append_envi[i] = Binding(func.args[i], interp(exp.args[i], envi))
+                    append_envi[func.args[i].i] = interp(exp.args[i], envi)
+                end
+
+                -- append extended envi to original envi
+                local new_envi = {}
+                for k, v in pairs(envi) do
+                    new_envi[k] = v
+                end
+                for k, v in pairs(append_envi) do
+                    new_envi[k] = v
+                end
+                return interp(func.body, new_envi)
+            elseif func ~= nil and func.type == "PrimV" then
+                local args_val = {}
+                for i = 1, #exp.args do
+                    args_val[i] = interp(exp.args[i], envi)
+                end
+
+                if func.primop == "+" then
+                    return NumV(args_val[1].n + args_val[2].n)
+                elseif func.primop == "-" then
+                    return NumV(args_val[1].n - args_val[2].n)
+                elseif func.primop == "*" then
+                    return NumV(args_val[1].n * args_val[2].n)
+                elseif func.primop == "/" then
+                    return NumV(args_val[1].n / args_val[2].n)
+                elseif func.primop == "<=" then
+                    return BoolV(args_val[1].n <= args_val[2].n)
+                elseif func.primop == "equal?" then
+                    return BoolV(args_val[1].n == args_val[2].n)
+                elseif func.primop == "true" then
+                    return BoolV(true)
+                elseif func.primop == "false" then
+                    return BoolV(false)
+                else
+                    print("AppC: func is not a function")
+                    return nil
+                end
+            else
+                print("Invalid expression type")
+                return nil
+            end
+        else
+            print("Invalid expression type")
+            return nil
+
+        end
+    end
+end
+
+
+local function lookup(id, env)
+    if (id.type ~= "string") then
+        print("invalid id variable name")
+        return nil
+    end
+    if (env.type ~= "Env") then
+        print("invalid environment for lookup")
+        return nil
+    end
+    if env[id] then
+        return env[id]
+    else
+        print("invalid id, unable to lookup")
+        return nil
+    end
+end
+
+function serialize(v)
+    if v.type == "NumV" then
+        return tostring(v.n)
+    elseif v.type == "BoolV" then
+        if v.b then
+            return "true"
+        end
+        return "false"
+    elseif v.type == "StrV" then
+        return v.s
+    elseif v.type == "CloV" then
+        return "#<procedure>"
+    elseif v.type == "PrimV" then
+        return "#<primop>"
+    end
+end
+
+-- serialize(interp(NumC(9), top_env))
+
+-- TEST CASES --
+print(num_add({ NumV(2), NumV(1) }).n)
+print(num_sub({ NumV(2), NumV(1) }).n)
+print(num_mult({ NumV(2), NumV(5) }).n)
+print(num_div({ NumV(6), NumV(2) }).n)
+print(num_less_than_equal({ NumV(1), NumV(2) }).b)
+print(num_less_than_equal({ NumV(2), NumV(1) }).b)
+print(equal({ StrV("hi"), NumV(1) }).b)
+print(equal({ StrV("hi"), StrV("hi") }).b)
+print(serialize(StrV("hi")))
+print(serialize(NumV(3)))
+print(serialize(CloV(args, body, env)))
+print(serialize(CloV(args, body, env)))
+print(exprToString(parse(1)))
+print(exprToString(parse(1)))
+print(exprToString(parse({ 1, '?', 2, 'else:', 3 })))
+print(exprToString(parse({ "blam", { "x", "y" }, { "+", "x", "y" } })))
+
+
+blam_call = AppC(BlamC({IdC("x")}, AppC(IdC("+"), { IdC("x"), NumC(1) })), {NumC(2)})
+print("Expecting 3. Got:")
+print(serialize(interp(blam_call)))
+
+serialize_test1 = NumV(9)
+print("Expecting 9. Got:")
+serialize(serialize_test1)
+
+serialize_test2 = CloV({IdC("x"), AppC(IdC("+"), { IdC("x"), NumC(1)})}, {NumC(2)})
+print("Expecting #<procedure>. Got:")
+serialize(serialize_test2)
+
