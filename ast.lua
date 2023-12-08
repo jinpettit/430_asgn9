@@ -195,21 +195,21 @@ top_env = {
 }
 
 -- serialize accepts any PAIG5 value and return a string
-function serialize(v)
-    if v.type == "NumV" then
-        return tostring(v.n)
-    elseif v.type == "BoolV" then
-        return v.b and "true" or "false"
-    elseif v.type == "StrV" then
-        return tostring(v.s)
-    elseif v.type == "CloV" then
-        return "#<procedure>"
-    elseif v.type == "PrimV" then
-        return "#<primop>"
-    else
-        error("serialize: unrecognized value type")
-    end
-end
+-- function serialize(v)
+--     if v.type == "NumV" then
+--         return tostring(v.n)
+--     elseif v.type == "BoolV" then
+--         return v.b and "true" or "false"
+--     elseif v.type == "StrV" then
+--         return tostring(v.s)
+--     elseif v.type == "CloV" then
+--         return "#<procedure>"
+--     elseif v.type == "PrimV" then
+--         return "#<primop>"
+--     else
+--         error("serialize: unrecognized value type")
+--     end
+-- end
 
 -- Returns true if input is an ExprC
 function isExprC(expr)
@@ -334,19 +334,19 @@ function parse(s)
     end
 end
 
-print(num_add({ NumV(2), NumV(1) }).n)
-print(num_sub({ NumV(2), NumV(1) }).n)
-print(num_mult({ NumV(2), NumV(5) }).n)
-print(num_div({ NumV(6), NumV(2) }).n)
-print(num_less_than_equal({ NumV(1), NumV(2) }).b)
-print(num_less_than_equal({ NumV(2), NumV(1) }).b)
-print(equal({ StrV("hi"), NumV(1) }).b)
-print(equal({ StrV("hi"), StrV("hi") }).b)
-print(serialize(StrV("hi")))
-print(serialize(NumV(3)))
-print(serialize(CloV(args, body, env)))
-print(serialize(CloV(args, body, env)))
-print(exprToString(parse(1)))
-print(exprToString(parse(1)))
-print(exprToString(parse({ 1, '?', 2, 'else:', 3 })))
-print(exprToString(parse({ "blam", { "x", "y" }, { "+", "x", "y" } })))
+-- print(num_add({ NumV(2), NumV(1) }).n)
+-- print(num_sub({ NumV(2), NumV(1) }).n)
+-- print(num_mult({ NumV(2), NumV(5) }).n)
+-- print(num_div({ NumV(6), NumV(2) }).n)
+-- print(num_less_than_equal({ NumV(1), NumV(2) }).b)
+-- print(num_less_than_equal({ NumV(2), NumV(1) }).b)
+-- print(equal({ StrV("hi"), NumV(1) }).b)
+-- print(equal({ StrV("hi"), StrV("hi") }).b)
+-- print(serialize(StrV("hi")))
+-- print(serialize(NumV(3)))
+-- print(serialize(CloV(args, body, env)))
+-- print(serialize(CloV(args, body, env)))
+-- print(exprToString(parse(1)))
+-- print(exprToString(parse(1)))
+-- print(exprToString(parse({ 1, '?', 2, 'else:', 3 })))
+-- print(exprToString(parse({ "blam", { "x", "y" }, { "+", "x", "y" } })))
